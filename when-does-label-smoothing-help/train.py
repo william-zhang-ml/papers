@@ -9,6 +9,7 @@ The pooling in ImageNet models may be inappropriate for Cifar10 as-is.
 import fire
 import torch
 from torch.utils.data import DataLoader
+from torch.utils.tensorboard import SummaryWriter
 from torchvision.datasets import CIFAR10
 from torchvision import models, transforms
 from tqdm import tqdm
@@ -76,10 +77,16 @@ def train(
         num_epochs // 3
     )
 
+    # set up tensorboard
+    step = 0
+    board = SummaryWriter(log_dir='tensorboard/train')
+    val_board = SummaryWriter(log_dir='tensorboard/val')
+
     # run main training loop
     prog_bar = tqdm(range(num_epochs))
     val_loss, val_acc = None, None
     for i_epoch in prog_bar:
+        # train
         for imgs, labels in tqdm(train_loader, leave=False):
             logits = model(augmenter(imgs.to(device)))
             loss = criteria(logits, labels.to(device))
@@ -89,9 +96,14 @@ def train(
             prog_bar.set_postfix({
                 'loss': float(loss),
                 'val-loss': val_loss,
-                'vall-acc': val_acc
+                'val-acc': val_acc
             })
 
+            step += 1
+            board.add_scalar('loss', loss, step)
+        scheduler.step()
+
+        # validate
         model.eval()
         val_logits, val_labels = [], []
         for imgs, labels in tqdm(val_loader, leave=False):
@@ -103,13 +115,15 @@ def train(
         val_labels = torch.cat(val_labels)
         val_loss = float(criteria(val_logits, val_labels))
         val_acc = float((val_pred == val_labels).float().mean())
+        val_board.add_scalar('loss', val_loss, step)
+        val_board.add_scalar('acc', val_acc, step)
         del val_logits, val_labels
         model.train()
-
-        scheduler.step()
+        if val_acc > 0.8:
+            torch.save(model.state_dict(), f'ls{smoothing}-epoch{i_epoch}.pt')
 
     # save final weights
-    torch.save(model, model.state_dict())
+    torch.save(model.state_dict(), f'ls-{smoothing}.pt')
 
 
 if __name__ == '__main__':
