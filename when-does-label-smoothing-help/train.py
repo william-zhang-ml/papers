@@ -19,7 +19,7 @@ def train(
     device: str = 'cpu',
     input_size: int = 64,
     batch_size: int = 128,
-    num_epochs: int = 300,
+    num_epochs: int = 225,
     smoothing: float = 0
 ) -> None:
     """Train a ResNet50 on CIFAR10 (3 cosine cycles) until 90% on val.
@@ -67,7 +67,13 @@ def train(
     criteria = torch.nn.CrossEntropyLoss(label_smoothing=smoothing)
     optimizer = torch.optim.SGD(
         model.parameters(),
-        lr=1e-3
+        lr=1e-3,
+        momentum=0.9,
+        weight_decay=1e-2
+    )
+    scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(
+        optimizer,
+        num_epochs // 3
     )
 
     # run main training loop
@@ -99,6 +105,8 @@ def train(
         val_acc = float((val_pred == val_labels).float().mean())
         del val_logits, val_labels
         model.train()
+
+        scheduler.step()
 
     # save final weights
     torch.save(model, model.state_dict())
