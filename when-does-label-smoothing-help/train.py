@@ -86,21 +86,19 @@ def train(
                 'vall-acc': val_acc
             })
 
-        # validate every 10 epochs
-        if (i_epoch + 1) % 10 == 0:
-            model.eval()
-            val_logits, val_labels = [], []
-            for imgs, labels in tqdm(val_loader, leave=False):
-                with torch.no_grad():
-                    val_logits.append(model(imgs.to(device)).cpu())
-                    val_labels.append(labels.cpu())
-            val_logits = torch.cat(val_logits)
-            val_pred = val_logits.argmax(dim=1)
-            val_labels = torch.cat(val_labels)
-            val_loss = float(criteria(val_logits, val_labels))
-            val_acc = float((val_pred == val_labels).float().mean())
-            del val_logits, val_labels
-            model.train()
+        model.eval()
+        val_logits, val_labels = [], []
+        for imgs, labels in tqdm(val_loader, leave=False):
+            with torch.no_grad():
+                val_logits.append(model(imgs.to(device)).cpu())
+                val_labels.append(labels.cpu())
+        val_logits = torch.cat(val_logits)
+        val_pred = val_logits.argmax(dim=1)
+        val_labels = torch.cat(val_labels)
+        val_loss = float(criteria(val_logits, val_labels))
+        val_acc = float((val_pred == val_labels).float().mean())
+        del val_logits, val_labels
+        model.train()
 
     # save final weights
     torch.save(model, model.state_dict())
