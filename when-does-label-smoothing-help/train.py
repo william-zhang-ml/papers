@@ -79,8 +79,8 @@ def train(
 
     # set up tensorboard
     step = 0
-    board = SummaryWriter(log_dir='tensorboard/train')
-    val_board = SummaryWriter(log_dir='tensorboard/val')
+    board = SummaryWriter(log_dir=f'tensorboard/ls{smoothing}-train')
+    val_board = SummaryWriter(log_dir=f'tensorboard/ls{smoothing}-val')
 
     # run main training loop
     prog_bar = tqdm(range(num_epochs))
