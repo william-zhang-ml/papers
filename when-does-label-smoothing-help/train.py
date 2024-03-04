@@ -26,7 +26,7 @@ def train(
 
     Args:
         cifar10_dir (str): path to torchvision-downloaded Cifar10
-        device (str): 'cpu' | 'cuda0' | etc
+        device (str): 'cpu' | 'cuda:0' | etc
         input_size (int): number of pixels to resize images to
         batch_size (int): samples per training minibatch
         num_epochs (int): number 0f epochs to train
@@ -61,8 +61,9 @@ def train(
         transforms.RandomVerticalFlip(),
         transforms.RandomHorizontalFlip()
     ])
-    model = models.resnet50().to(device)
+    model = models.resnet50()
     model.fc = torch.nn.Linear(model.fc.in_features, 10)
+    model = model.to(device)
     criteria = torch.nn.CrossEntropyLoss(label_smoothing=smoothing)
     optimizer = torch.optim.SGD(
         model.parameters(),
@@ -75,7 +76,7 @@ def train(
     for i_epoch in prog_bar:
         for imgs, labels in tqdm(train_loader, leave=False):
             logits = model(augmenter(imgs.to(device)))
-            loss = criteria(logits, labels)
+            loss = criteria(logits, labels.to(device))
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
